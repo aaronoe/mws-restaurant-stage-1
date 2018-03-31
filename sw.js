@@ -1,5 +1,8 @@
 var RESTAURANTS_CACHE_NAME = 'restaurant-cache';
 
+/**
+ * paths to all static assets to be cached
+ */
 var urlsToCache = [
     '/',
     './index.html',
@@ -33,6 +36,10 @@ self.addEventListener('install', function (event) {
     );
 });
 
+/**
+ * Intercept all requests and return cached file if available.
+ * Otherwise proceed with fetching it
+ */
 self.addEventListener('fetch', event => {
     console.log('Event: SW Fetch');
     event.respondWith(
