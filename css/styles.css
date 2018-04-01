@@ -101,6 +101,12 @@ nav h1 a {
   text-transform: uppercase;
 }
 
+#breadcrumb-nav {
+  text-align: left;
+  height: auto;
+  width: auto;
+}
+
 #breadcrumb {
   padding: 10px 40px 16px;
   list-style: none;
@@ -204,11 +210,11 @@ nav h1 a {
   display: block;
   margin: 0;
   max-width: 100%;
-  min-height: 248px;
+  min-height: auto;
   min-width: 100%;
 }
 
-#restaurants-list li h1 {
+#restaurants-list li h2 {
   color: #f18200;
   font-family: Arial, sans-serif;
   font-size: 14pt;
