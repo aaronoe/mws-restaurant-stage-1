@@ -1,41 +1,76 @@
+import idb from 'idb';
+
+let dbPromise;
 /**
  * Common database helper functions.
  */
 class DBHelper {
-
-  /**
-   * Database URL.
-   * Change this to restaurants.json file location on your server.
-   */
-  static get DATABASE_URL() {
-    const port = 8000 // Change this to your server port
-    return `http://localhost:${port}/data/restaurants.json`;
-  }
 
   static get SERVER_URL() {
     const port = 1337;
     return `http://localhost:${port}/restaurants`;
   }
 
+  static openDatabase() {
+    return idb.open('restaurants', 1, db => {
+      db.createObjectStore('restaurants', {
+        keyPath: 'id'
+      });
+    });
+  }
+
+  static getCachedRestaurants() {
+    dbPromise = this.openDatabase();
+
+    return dbPromise.then((db) => {
+      if (!db) return;
+
+      let transaction = db.transaction('restaurants');
+      let store = transaction.objectStore('restaurants');
+
+      return store.getAll();
+    });
+  }
+
   /**
    * Fetch all restaurants.
    */
   static fetchRestaurants(callback) {
-    fetch(this.SERVER_URL)
-      .then((response) => {
-        if (response.ok) {
-          return response.json();
-        }
-        throw new Error('Network response was not ok.');
-      })
-      .then((json) => {
-        callback(null, json);
-      })
-      .catch((err) => {
-        console.log(err);
-        const errorText = (`Request failed. Returned status of ${err}`);
-        callback(errorText, null);
-      });
+    DBHelper.getCachedRestaurants().then((data) => {
+      // if there were restaurants in the db, return them
+      if (data.length > 0) return callback(null, data);
+
+      // otherwise fetch and save restaurants from the server
+      fetch(this.SERVER_URL)
+        .then((response) => {
+          if (response.ok) {
+            return response.json();
+          }
+          throw new Error('Network response was not ok.');
+        })
+        .then((json) => {
+          dbPromise.then((db) => {
+            if (!db) return callback(null, json);
+
+            let transaction = db.transaction('restaurants', 'readwrite');
+            let store = transaction.objectStore('restaurants');
+
+            json.forEach((restaurant) => store.put(restaurant));
+
+            // Only store 30 restaurants at a time. Delete the rest
+            store.openCursor(null, 'prev')
+              .then((cursor) => cursor.advance(30))
+              .then(function deleteRestaurants(cursor) {
+                if (!cursor) return;
+                cursor.delete();
+                return cursor.continue().then(deleteRestaurants);
+              })
+          });
+
+          callback(null, json);
+        })
+        .catch((err) => callback(errorText, null));
+    });
   }
 
   /**
@@ -176,3 +211,5 @@ class DBHelper {
   }
 
 }
+
+module.exports = DBHelper;
